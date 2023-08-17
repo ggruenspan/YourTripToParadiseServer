@@ -3,11 +3,25 @@ const Schema = mongoose.Schema;
 const bcrypt = require('bcryptjs');
 
 var userSchema = new Schema({
-    email: { type: 'string', unique: true },
-    userName: { type: 'string' },
-    firstName: { type: 'string' },
-    lastName: { type: 'string' },
-    password: { type: 'string' },
+    userName: String,
+    password: String,
+    accountSetting: {
+        personalInfo: {
+            firstName: String,
+            lastName: String,
+            email: {
+                type: String,
+                unique:true
+            },
+            phone: String,
+            dof: String,
+            address: String
+        },
+        loginHistory: [{
+            dateTime: Date,
+            userAgent: String
+        }]
+    }
 });
 
 let User; //to be defined on new connection (see initialize)
@@ -25,35 +39,49 @@ function initialize () {
     });
 };
 
-function register(req, res) {
-    if(req.body.password !== req.body.password2) {
-        res.status(400).send({ message: 'Passwords do not match' });
-    } else {
-        User.find({email: req.body.email})
-        .exec()
-        .then((users) => {
-            if (users.length > 0) {
-            res.status(400).send({ message: 'There is already a user with that email: ' + req.body.email });
-            }
-            else {
-                bcrypt.hash(req.body.password, 10)
-                .then((hash) => {
-                    req.body.password = hash;
-                    let newUser = new User(req.body);
-                    newUser.save(newUser)
-                    .then(data => { res.send(data); })
-                    .catch(err => {
-                        res.status(500).send({ message: 'There was an error creating the user: ' + err.message });
-                    });
+function register(userData) {
+    return new Promise(function (resolve, reject) {
+        // console.log(userData);
+        if (userData.password !== userData.password2) {
+            reject('Passwords do not match');
+        }
+        else {
+            bcrypt.hash(userData.password, 10)
+            .then((hash) => {
+                let newUser = new User({
+                    userName: (userData.firstName.charAt(0).toUpperCase() + userData.firstName.slice(1)) + "." + userData.lastName[0].toUpperCase(),
+                    password: hash,
+                    accountSetting: {
+                        personalInfo: {
+                            firstName: userData.firstName.charAt(0).toUpperCase() + userData.firstName.slice(1),
+                            lastName: userData.lastName.charAt(0).toUpperCase() + userData.lastName.slice(1),
+                            email: userData.email,
+                        },
+                    },
+                });
+
+                newUser.save(newUser)
+                .then(() => { resolve(); })
+                .catch(err => { 
+                    if (err.code == 11000) { reject('There is already a user with that email: ' + userData.email); } 
+                    else { reject('There was an error creating the user: ' + err); }
                 })
-                .catch(err=>{ console.log(err); })
-            }
-        })
-        .catch(() => { res.status(500).send({ message: 'Unable to find user: ' + req.body.email }); })
-    }
-}
+            })
+            .catch((err) => {
+                reject('There was an error creating the user: ' + err );
+            })
+        }
+    });
+};
+
+function signIn(userData) {
+    return new Promise((resolve, reject) => {
+
+    });
+};
 
 module.exports = {
     initialize,
     register,
+    signIn,
 }
