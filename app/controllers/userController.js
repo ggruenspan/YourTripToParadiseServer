@@ -76,8 +76,25 @@ function register(userData) {
 
 function signIn(userData) {
     return new Promise((resolve, reject) => {
-        console.log('signIn', userData);
-        resolve();
+        // User.find({email: userData.email})
+        // .exec()
+        // .then((users) => {
+        //     if (users.length == 0) {
+        //         reject('Unable to find email: ' + userData.email);
+        //     } else {
+        //         bcrypt.compare(userData.password, userData[0].password).then((result) => {
+        //             if (result == true) {
+        //                 users[0].accountSettings.loginHistory.push({dateTime: (new Date()).toString(), userAgent:userData.userAgent});
+        //                 User.updateOne({ $set: { 'accountSettings.loginHistory': users[0].accountSettings.loginHistory } })
+        //                 .exec()
+        //                 .then(() => { resolve(users[0]) })
+        //                 .catch(() => { reject('There was an error verifying the user: ' + err) })
+        //             }
+        //             else { reject('Incorrect password for user: ' + userData.email); }
+        //         })
+        //     }
+        // })
+        // .catch(() => { reject("Unable to find user: " + userData.email); });
     });
 };
 

@@ -18,7 +18,7 @@ module.exports = app => {
         .catch(err => res.status(404).json({errorMessage: err}))
     });
 
-    // app.post("/signin", function(req,res) {
+    // router.post("/signin", function(req,res) {
     //     req.body.userAgent = req.get('User-Agent');
     //     user.signIn(req.body)
     //     .then(user => {
