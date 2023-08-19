@@ -76,7 +76,8 @@ function register(userData) {
 
 function signIn(userData) {
     return new Promise((resolve, reject) => {
-
+        console.log('signIn', userData);
+        resolve();
     });
 };
 
