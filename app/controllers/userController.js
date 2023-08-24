@@ -60,15 +60,16 @@ function register(userData) {
                     },
                 });
 
-                newUser.save(newUser)
+                newUser.save()
                 .then(() => { resolve(); })
-                .catch(err => { 
+                .catch(err => {
                     if (err.code == 11000) { reject('There is already a user with that email: ' + userData.email); } 
                     else { reject('There was an error creating the user: ' + err); }
-                })
+                });
             })
-            .catch((err) => {
-                reject('There was an error creating the user: ' + err );
+            .catch(() => {
+                reject('Error hashing password');
+                
             })
         }
     });
@@ -76,25 +77,28 @@ function register(userData) {
 
 function signIn(userData) {
     return new Promise((resolve, reject) => {
-        // User.find({email: userData.email})
-        // .exec()
-        // .then((users) => {
-        //     if (users.length == 0) {
-        //         reject('Unable to find email: ' + userData.email);
-        //     } else {
-        //         bcrypt.compare(userData.password, userData[0].password).then((result) => {
-        //             if (result == true) {
-        //                 users[0].accountSettings.loginHistory.push({dateTime: (new Date()).toString(), userAgent:userData.userAgent});
-        //                 User.updateOne({ $set: { 'accountSettings.loginHistory': users[0].accountSettings.loginHistory } })
-        //                 .exec()
-        //                 .then(() => { resolve(users[0]) })
-        //                 .catch(() => { reject('There was an error verifying the user: ' + err) })
-        //             }
-        //             else { reject('Incorrect password for user: ' + userData.email); }
-        //         })
-        //     }
-        // })
-        // .catch(() => { reject("Unable to find user: " + userData.email); });
+        User.findOne({ "accountSetting.personalInfo.email": userData.email })
+        .then((user) => {
+            if (!user) {
+                reject("Unable to find user with email: " + userData.email);
+            }
+            bcrypt.compare(userData.password, user.password)
+            .then((result) => {
+                if (result === true) {
+                    user.accountSetting.loginHistory.push({dateTime: new Date(), userAgent: userData.userAgent});
+                    User.updateOne({ $set: { "accountSetting.loginHistory": user.accountSetting.loginHistory}})
+                    .then(() => { resolve(user); })
+                    .catch(err => {reject("There was an error verifying the user: " + err)})
+                }
+                else { reject("Incorrect Password for user: " + userData.email); }
+            })
+            .catch((err) => {
+                reject('There was an error check the user: ' + err );
+            })
+        })
+        .catch((err) => {
+            reject('There was an error finding user: ' + err);
+        })
     });
 };
 
