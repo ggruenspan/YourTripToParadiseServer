@@ -54,10 +54,10 @@ app.use(clientSessions( {
     activeDuration: 1000*60
 }));
 
-// app.use(function(req, res, next) {
-//     res.locals.session = req.session;
-//     next();
-// });
+app.use(function(req, res, next) {
+    res.locals.session = req.session;
+    next();
+});
 
 //---------------------------------------------------------------------------
 /// END CREATES CLIENTSESSION
