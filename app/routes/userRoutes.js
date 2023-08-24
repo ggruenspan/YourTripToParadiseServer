@@ -1,20 +1,7 @@
 const user = require("../controllers/userController.js");
-// const clientSessions = require("client-sessions");
 
 module.exports = app => {
     var router = require("express").Router();
-
-    // app.use(clientSessions( {
-    //     cookieName: "session",
-    //     secret: process.env.MONGODB_CONN_STR || "your-trip-to-paradise",
-    //     duration: 2*60*1000,
-    //     activeDuration: 1000*60
-    // }));
-    
-    // app.use(function(req, res, next) {
-    //     res.locals.session = req.session;
-    //     next();
-    // });
 
     // Registers a new user
     router.post("/register", function(req,res) {
@@ -39,11 +26,13 @@ module.exports = app => {
 
     // User Session
     router.get("/userData", function(req, res) {
-        const userData = {
-            userName: req.session.user.userName || 'Guest',
-            email: req.session.user.email || 'N/A',
-        };
-        res.json(userData);
+        if (req.session.user !== undefined) {
+            const userData = {
+                userName: req.session.user.userName || 'Guest',
+                email: req.session.user.email || 'N/A',
+            };
+            res.json(userData);
+        }
     });
     
     app.use("/api", router);
