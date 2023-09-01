@@ -1,101 +1,55 @@
-//---------------------------------------------------------------------------
-/// SERVER VARIABLES
-//---------------------------------------------------------------------------
+// server.js
 
-var express = require("express");
-const userService = require("./app/controllers/userController.js");
-const mongoose = require("mongoose");
-const cors = require("cors");
-const clientSessions = require("client-sessions");
-
+const express = require('express');
+const session = require('express-session');
+const mongoose = require('mongoose');
+const passport = require('passport');
+const cors = require('cors');
+const cookieParser = require('cookie-parser');
 require('dotenv').config();
-const connectionString = process.env.MONGODB_CONN_STR;
 
+const userService = require('./app/models/dbInitializer.js');
+const passport_user = require('./app/user/userPassport.js');
+const usersAPI = require('./app/user/userAPI.js');
+
+// Middleware
 var app = express();
+
 app.use(cors({
     origin: 'http://localhost:8081',
     methods: ['POST', 'GET'],
     credentials: true
 }));
-
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
+app.use(session({
+    secret: process.env.SESSION_SECRET || 'your-trip-to-paradise',
+    resave: false,
+    saveUninitialized: true,
+    cookie: { secure: true }
+}))
+app.use(passport.initialize());
+app.use(passport.session());
 
-var HTTP_PORT = process.env.PORT || 8080;
-
-//---------------------------------------------------------------------------
-/// SERVER VARIABLES END
-//---------------------------------------------------------------------------
-
-//---------------------------------------------------------------------------
-/// PRE LOADING DATABASE
-//---------------------------------------------------------------------------
-
-// connect to your mongoDB database
-mongoose.connect(connectionString, { useNewUrlParser: true, useUnifiedTopology: true });
-
-// log when the DB is connected
+// MongoDB setup
+mongoose.connect(process.env.MONGODB_CONN_STR, { useNewUrlParser: true, useUnifiedTopology: true });
 mongoose.connection.on("open", () => {
-    console.log("Database connection open.");
+    console.log('Connected to MongoDB');
 });
 
-//---------------------------------------------------------------------------
-/// END PRE LOADING DATABASE
-//---------------------------------------------------------------------------
+// Routes
+passport.use('passport_user', passport_user);
+app.use('/api', usersAPI);
 
-//---------------------------------------------------------------------------
-/// CREATES CLIENTSESSION
-//---------------------------------------------------------------------------
-
-app.use(clientSessions( {
-    cookieName: "session",
-    secret: process.env.MONGODB_CONN_STR || "your-trip-to-paradise",
-    duration: 2*60*1000,
-    activeDuration: 1000*60
-}));
-
-app.use(function(req, res, next) {
-    res.locals.session = req.session;
-    next();
-});
-
-//---------------------------------------------------------------------------
-/// END CREATES CLIENTSESSION
-//---------------------------------------------------------------------------
-
-
-//---------------------------------------------------------------------------
-/// ADDING ROUTES
-//---------------------------------------------------------------------------
-
-function onHttpStart() {                                                            // call this function after the http server starts listening for requests
-    console.log("Express http server listening on: " + HTTP_PORT);
-}
-
-app.get("/", (req, res) => {
-    res.json({ message: "Welcome to Your Trip To Paradise server." });
-});
-
-require("./app/routes/userRoutes")(app);
-
-//---------------------------------------------------------------------------
-/// END ADDING ROUTES
-//---------------------------------------------------------------------------
-
-//---------------------------------------------------------------------------
-/// INITIALIZE
-//---------------------------------------------------------------------------
-
-console.log ("Ready for initialization");
+// Start the server
 userService.initialize()
 .then(() => {
-    console.log ("Server Initialized.");
-    app.listen(HTTP_PORT, onHttpStart);  //setup http server to listen on HTTP_PORT
+    console.log ('Server Initialized');
+    app.listen(process.env.PORT, () => {
+        console.log(`Server running on port ${process.env.PORT}`);
+    });
 })
 .catch(function(err) {
     console.log(err);
 });
-
-//---------------------------------------------------------------------------
-/// END UNKNOW ROUTE AND INITIALIZE
-//---------------------------------------------------------------------------
