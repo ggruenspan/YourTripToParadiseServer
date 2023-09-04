@@ -2,7 +2,6 @@
 
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
-const cookieParser = require('cookie-parser');
 const userSchema = require('../models/userSchema.js')
 const User = mongoose.model('users', userSchema);
 
@@ -20,7 +19,7 @@ function register(req, res) {
     User.findOne({ "accountSetting.personalInfo.email": req.body.email })
     .then((user) => {
         if(user) {
-            return res.status(400).json('Username already taken');
+            return res.status(400).json('There is already a user with that email: ' + req.body.email);
         }
         
         // Hashes the password
