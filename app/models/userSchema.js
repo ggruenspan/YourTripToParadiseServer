@@ -22,7 +22,9 @@ const userSchema = new Schema({
             _id: false,
             dateTime: Date,
             userAgent: String
-        }]
+        }],
+        resetToken: String,
+        resetTokenExpiration: Date,
     }
 });
 

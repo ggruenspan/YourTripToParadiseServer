@@ -4,6 +4,8 @@ const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 const userSchema = require('../models/userSchema.js')
 const User = mongoose.model('users', userSchema);
+const crypto = require('crypto');
+const nodemailer = require('nodemailer');
 
 const { jwtSign } = require('../utility/jwtSign.js');
 
@@ -110,7 +112,73 @@ function signIn(req, res) {
     })
 };
 
+function forgotPassword(req, res) {
+    // console.log('forgot password', req.body);
+
+    // Check if the email is in the database
+    User.findOne({ "accountSetting.personalInfo.email": req.body.email })
+    .then((user) => {
+        if(!user) {
+            return res.status(400).json('Unable to find user with email: ' + req.body.email);
+        }
+
+        // Generate a unique reset token
+        const resetToken = crypto.randomBytes(20).toString('hex');
+        const expirationTime = new Date()
+        // console.log(expirationTime.toLocaleString("en-US", {timeZone: "America/New_York"}));
+        expirationTime.setMinutes(expirationTime.getMinutes() + 15);
+
+        // Store the reset token and expiration in the user's document
+        user.accountSetting.resetToken = resetToken;
+        user.accountSetting.resetTokenExpiration = expirationTime;
+
+        // Save the updated user document in the database
+        user.save()
+        .then(() => {
+            const transporter = nodemailer.createTransport({
+                service: 'Gmail',
+                auth: {
+                    user: process.env.EMAIL_USER,
+                    pass: process.env.EMAIL_PASSWORD,
+                },
+            });
+
+            const mailOptions = {
+                to: user.accountSetting.personalInfo.email,
+                subject: 'Password Reset',
+                html: `
+                    <p>You are receiving this because you (or someone else) has requested the reset of the password for your account.</p>
+                    <p>Please click on the following link, or paste this into your browser to complete the process:</p>
+                    <p><a href="http://localhost:8081/reset-password/${resetToken}">Reset Password Link</a></p>
+                    <p>This link is valid for 15 minutes. If you do not reset your password within this time, you will need to request another reset link.</p>
+                    <p>If you did not request this, please ignore this email, and your password will remain unchanged.</p>
+                `,
+            };
+            
+            transporter.sendMail(mailOptions, (error, info) => {
+                if (error) {
+                    // console.error(error);
+                    return res.status(500).json('An error occurred while sending the password reset email');
+                }
+                return res.status(200).json('Password reset email sent');
+            });
+
+        })
+        .catch((error) => {
+            // console.error(err);
+            return res.status(500).json('An error occurred while saving the reset token');
+        });
+
+    })
+    .catch((err) => {
+        // console.error(err);
+        return res.status(500).json('An error occurred while finding the user');
+    });
+
+}
+
 module.exports = {
     register,
     signIn,
+    forgotPassword,
 }
