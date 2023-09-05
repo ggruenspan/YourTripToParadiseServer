@@ -20,7 +20,7 @@ function register(req, res) {
     // Check if the email is already taken
     User.findOne({ "accountSetting.personalInfo.email": req.body.email })
     .then((user) => {
-        if(user) {
+        if (user) {
             return res.status(400).json('There is already a user with that email: ' + req.body.email);
         }
         
@@ -65,7 +65,7 @@ function signIn(req, res) {
     // Check if the email is in the database
     User.findOne({ "accountSetting.personalInfo.email": req.body.email })
     .then((user) => {
-        if(!user) {
+        if (!user) {
             return res.status(400).json('Unable to find user with email: ' + req.body.email);
         }
 
@@ -118,21 +118,23 @@ function forgotPassword(req, res) {
     // Check if the email is in the database
     User.findOne({ "accountSetting.personalInfo.email": req.body.email })
     .then((user) => {
-        if(!user) {
+        if (!user) {
             return res.status(400).json('Unable to find user with email: ' + req.body.email);
         }
 
         // Generate a unique reset token
         const resetToken = crypto.randomBytes(20).toString('hex');
-        const expirationTime = new Date()
-        // console.log(expirationTime.toLocaleString("en-US", {timeZone: "America/New_York"}));
+        const expirationTime = new Date();
+        // console.log(expirationTime.toLocaleTimeString());
         expirationTime.setMinutes(expirationTime.getMinutes() + 15);
+        // console.log(expirationTime.toLocaleTimeString());
+        
 
         // Store the reset token and expiration in the user's document
         user.accountSetting.resetToken = resetToken;
         user.accountSetting.resetTokenExpiration = expirationTime;
 
-        // Save the updated user document in the database
+        // Save the updated user in the database
         user.save()
         .then(() => {
             const transporter = nodemailer.createTransport({
@@ -174,11 +176,65 @@ function forgotPassword(req, res) {
         // console.error(err);
         return res.status(500).json('An error occurred while finding the user');
     });
+};
 
-}
+function resetPassword(req, res) {
+    // console.log('reset password', req.body);
+
+    // Find the user by the reset token and check if it's still valid
+    User.findOne({ "accountSetting.resetToken": req.params.token })
+    .then((user) => {
+        if(user.accountSetting.resetTokenExpiration.toLocaleTimeString() < new Date().toLocaleTimeString()) {
+            return res.status(400).json('Invalid or expired token');
+        }
+
+        // Check if the new password is the same as the current password
+        bcrypt.compare(req.body.password, user.password)
+        .then((result) => {
+            if(result === false) {
+                if (req.body.password !== req.body.password2) {
+                    return res.status(400).json('Passwords do not match');
+                }
+
+                bcrypt.hash(req.body.password, 10)
+                .then((hash) => {
+                    // Update the user's password and clear the reset token fields
+                    user.password = hash;
+                    user.accountSetting.resetToken = undefined;
+                    user.accountSetting.resetTokenExpiration = undefined;
+
+                    // Save the updated user in the database
+                    user.save()
+                    .then(() => {
+                        res.status(200).json('Password reset successfully');
+                    })
+                    .catch((error) => {
+                        // console.error(err);
+                        return res.status(500).json('An error occurred while resetting you password in');
+                    }); 
+                })
+                .catch((err) => {
+                    // console.error(hashErr);
+                    return res.status(500).json('An error occurred while resetting you password in');
+                });
+            } else {
+                return res.status(400).json('You cannot use your current password as the new password');
+            }
+        })
+        .catch((err) => {
+            // console.error(err);
+            return res.status(500).json('An error occurred while resetting you password in');
+        });
+    })
+    .catch((err) => {
+        // console.error(err);
+        return res.status(500).json('An error occurred while finding the user');
+    });
+};
 
 module.exports = {
     register,
     signIn,
     forgotPassword,
+    resetPassword
 }

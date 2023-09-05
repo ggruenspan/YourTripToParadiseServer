@@ -11,6 +11,7 @@ require('dotenv').config();
 const userService = require('./app/models/dbInitializer.js');
 const passport_user = require('./app/user/userPassport.js');
 const usersAPI = require('./app/user/userAPI.js');
+process.env.TZ = 'America/New_York';                            // Set the timezone to 'America/New_York'
 
 // Middleware
 var app = express();
