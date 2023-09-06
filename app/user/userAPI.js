@@ -18,7 +18,6 @@ router.post('/register', function(req,res) {
     userController.register(req, res);
 });
 
-
 /* 
     @route  /api/signIn
     @desc   Signs in users
